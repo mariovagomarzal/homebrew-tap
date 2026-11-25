@@ -40,7 +40,7 @@ permissions:
 jobs:
   update:
     name: Update ${{ github.event.client_payload.package || inputs.package }}
-    runs-on: macos-latest
+    runs-on: xcode-27
     steps:
       - uses: actions/checkout@v7
         with:
