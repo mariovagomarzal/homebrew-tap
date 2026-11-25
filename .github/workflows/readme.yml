@@ -26,8 +26,8 @@ jobs:
     name: Update the package list
     runs-on: xcode-27
     steps:
-      - uses: actions/checkout@v7
-
+      # setup-homebrew fetches the repository itself and links it in as the tap, replacing whatever a checkout
+      # left in the workspace, its credentials included.
       - uses: Homebrew/actions/setup-homebrew@main
 
       - name: Install the tools the scripts use
@@ -35,8 +35,10 @@ jobs:
 
       - name: Write the package list and commit it if it changed
         env:
+          GH_TOKEN: ${{ github.token }}
           HOMEBREW_GITHUB_API_TOKEN: ${{ github.token }}
         run: |
+          gh auth setup-git
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           # Another push can land in between, so each attempt starts again from the latest main.
