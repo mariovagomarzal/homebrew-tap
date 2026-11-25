@@ -13,7 +13,9 @@ brew install --cask mariovagomarzal/tap/<cask>
 
 <!-- BEGIN PACKAGES: written by scripts/readme.sh -->
 
-No packages yet.
+| Package | Kind | Version | Description | Updates |
+| ------- | ---- | ------- | ----------- | ------- |
+| [looper](https://mariovagomarzal.github.io/Looper/) | cask | 0.1.1 | Tiling window manager steered with the keyboard and a radial wheel | Automatic, by pull request |
 
 <!-- END PACKAGES -->
 
