@@ -1,0 +1,67 @@
+name: Update
+
+# Another repository asks for an update with the action in `action.yml`, which sends a `repository_dispatch`;
+# it can also be run by hand. Either way `scripts/update.sh` does the work, following `packages/<package>.yml`.
+on:
+  repository_dispatch:
+    types: [update]
+  workflow_dispatch:
+    inputs:
+      package:
+        description: The package to update
+        required: true
+        type: string
+      version:
+        description: The new version
+        required: true
+        type: string
+      args:
+        description: Extra arguments, as a JSON object
+        required: false
+        type: string
+        default: "{}"
+      dry-run:
+        description: Dry run, which makes and checks the change without delivering it
+        required: false
+        type: boolean
+        default: false
+
+# Updates of one package run one after the other, and a newer request waiting replaces an older one.
+concurrency:
+  group: update-${{ github.event.client_payload.package || inputs.package }}
+  cancel-in-progress: false
+
+permissions:
+  # To start the README workflow after committing an update.
+  actions: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    name: Update ${{ github.event.client_payload.package || inputs.package }}
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: Homebrew/actions/setup-homebrew@main
+
+      - name: Install the tools the scripts use
+        run: command -v yq >/dev/null || brew install yq
+
+      - name: Update the package
+        env:
+          PACKAGE: ${{ github.event.client_payload.package || inputs.package }}
+          VERSION: ${{ github.event.client_payload.version || inputs.version }}
+          ARGS: ${{ github.event_name == 'repository_dispatch' && toJSON(github.event.client_payload.args) || inputs.args }}
+          SOURCE: ${{ github.event.client_payload.source }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          DRY_RUN: ${{ inputs.dry-run && '1' || '' }}
+          GH_TOKEN: ${{ github.token }}
+          HOMEBREW_GITHUB_API_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          scripts/update.sh "$PACKAGE" "$VERSION" "$ARGS"

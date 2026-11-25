@@ -1,0 +1,45 @@
+name: Update a Homebrew package
+description: Ask a Homebrew tap built like this one to update one of its packages to a new version.
+
+inputs:
+  token:
+    description: A token allowed to write the tap's contents, which sending it an event requires.
+    required: true
+  package:
+    description: The package to update, a formula or cask of the tap.
+    required: true
+  version:
+    description: The new version. A leading `v`, as in a tag `v1.2.3`, is dropped.
+    required: true
+  args:
+    description: Extra arguments for the update, one `name=value` per line. The package must allow each name.
+    required: false
+    default: ""
+  repository:
+    description: The tap's repository.
+    required: false
+    default: mariovagomarzal/homebrew-tap
+
+runs:
+  using: composite
+  steps:
+    - name: Ask the tap to update the package
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        PACKAGE: ${{ inputs.package }}
+        VERSION: ${{ inputs.version }}
+        ARGS: ${{ inputs.args }}
+        REPOSITORY: ${{ inputs.repository }}
+        SOURCE: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: |
+        set -euo pipefail
+        args=$(jq --raw-input --null-input '
+          [inputs | select(test("\\S")) | sub("^\\s+|\\s+$"; ""; "g")
+            | if test("^[a-z][a-z0-9_]*=") then capture("^(?<key>[^=]+)=(?<value>.*)$")
+              else error("not a name=value line: \(.)") end]
+          | from_entries' <<<"$ARGS")
+        jq --null-input --arg package "$PACKAGE" --arg version "$VERSION" --arg source "$SOURCE" --argjson args "$args" \
+          '{event_type: "update", client_payload: {package: $package, version: $version, args: $args, source: $source}}' |
+          gh api --method POST "repos/$REPOSITORY/dispatches" --input -
+        echo "Asked [$REPOSITORY](https://github.com/$REPOSITORY/actions/workflows/update.yml) to update \`$PACKAGE\` to $VERSION." >>"$GITHUB_STEP_SUMMARY"

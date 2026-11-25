@@ -1,0 +1,57 @@
+name: README
+
+# Keeps the list of packages in README.md up to date. It runs on every push to main that can change the list, and
+# `scripts/update.sh` starts it after committing an update, since the pushes of a workflow start no other workflows.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Formula/**"
+      - "Casks/**"
+      - "packages/**"
+      - "scripts/**"
+      - "README.md"
+  workflow_dispatch:
+
+# The list is written from scratch each time, so a newer run waiting can replace an older one.
+concurrency:
+  group: readme
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  readme:
+    name: Update the package list
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: Homebrew/actions/setup-homebrew@main
+
+      - name: Install the tools the scripts use
+        run: command -v yq >/dev/null || brew install yq
+
+      - name: Write the package list and commit it if it changed
+        env:
+          HOMEBREW_GITHUB_API_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Another push can land in between, so each attempt starts again from the latest main.
+          for attempt in 1 2 3; do
+            git fetch --quiet origin main
+            git reset --quiet --hard origin/main
+            scripts/readme.sh
+            if git diff --quiet -- README.md; then
+              echo "The package list is up to date."
+              exit 0
+            fi
+            git commit --quiet --message "docs(readme): update the package list" -- README.md
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "Push $attempt failed; trying again on the latest main"
+          done
+          exit 1

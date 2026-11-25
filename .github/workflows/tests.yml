@@ -1,0 +1,46 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint the tap's code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: scripts/lint.sh
+
+  packages:
+    name: Check the changed packages
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: Homebrew/actions/setup-homebrew@main
+
+      - name: Check the formulae and casks that changed
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HOMEBREW_GITHUB_API_TOKEN: ${{ github.token }}
+        run: |
+          # A new branch has no previous commit to compare with, so everything is checked.
+          if [[ $BASE =~ ^0+$ ]] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            BASE=$(git hash-object -t tree /dev/null)
+          fi
+          packages=()
+          while IFS= read -r file; do
+            if [[ -f $file ]]; then packages+=("$(basename "$file" .rb)"); fi
+          done < <(git diff --name-only "$BASE" HEAD -- 'Formula/*.rb' 'Casks/*.rb')
+          if [[ ${#packages[@]} -eq 0 ]]; then
+            echo "No formula or cask changed."
+          else
+            scripts/check.sh "${packages[@]}"
+          fi
