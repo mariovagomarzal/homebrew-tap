@@ -17,8 +17,8 @@ cask "looper" do
   app "Looper-v#{version}/Looper.app"
   binary "Looper-v#{version}/bin/looper"
   bash_completion "Looper-v#{version}/shell-completion/looper.bash"
-  fish_completion "Looper-v#{version}/shell-completion/looper.fish"
   zsh_completion "Looper-v#{version}/shell-completion/_looper"
+  fish_completion "Looper-v#{version}/shell-completion/looper.fish"
 
   # Looper is signed with its own certificate and not notarised, so Gatekeeper refuses to open it while it is
   # quarantined.
