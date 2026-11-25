@@ -1,0 +1,2 @@
+# Looper publishes a release when its VERSION changes on main, and its release job asks for the update.
+delivery: pr

@@ -197,6 +197,10 @@ the pull request is merged.
 - **Lint**, on Linux: `scripts/lint.sh` runs shellcheck on the scripts and validates every file in `packages/`.
 - **Packages**, on macOS: `scripts/check.sh` on each formula and cask the change touches.
 
+The macOS jobs, here and in the other workflows, run on `xcode-27`, the only runner GitHub offers with macOS 27,
+because a package can require the newest macOS, as Looper does: `macos-latest` is still macOS 26. When a newer macOS
+comes out, move them to it.
+
 Pull requests opened by the update workflow do not start `tests.yml`, since they come from its `GITHUB_TOKEN`; the
 update has run the same checks already, and the pull request links to that run.
 
